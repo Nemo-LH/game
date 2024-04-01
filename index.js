@@ -1,5 +1,115 @@
 
 
+let userInput = document.getElementById("input");
+let textOutput = document.getElementById("output");
+let locationOutput = document.getElementById("location");
+let basketOutput = document.getElementById('basket');
+let sound = document.getElementById('ambiance');
+let soundSource = document.getElementById('audioSource')
+let photo = document.getElementById('environment');
+let playButton = document.getElementById('play');
+let muteButton = document.getElementById('muteBtn');
+let itemBox = document.getElementById('inventoryBox');
+let knifeStatus = `On the floor is a knife.`
+let isPlaying = true
+
+let playerInventory = {
+  //fun fact: the original Zork had a water bottle you could drink from that would refresh the narrator. Thats why I included it as the default inventory item.
+    items: {
+      Water: 'Water. looks refreshing',
+}}
+//tidy this up later
+let currentItems = ['Water'];
+document.getElementById('firstItem').textContent = `Water | Description:`+ playerInventory.items.Water;
+
+let photoDatabase = {
+  front: 'https://i.imgur.com/hHGRykT.png',
+  back: 'https://i.imgur.com/MGBgcux.png',
+  hole: 'https://i.imgur.com/0eRhzEs.png',
+  deepHole: '',
+}
+
+let soundDatabase = {
+  front: 'audio/crickets.mp3',
+  back: 'audio/backyard.mp3',
+  hole: '',
+}
+
+let lore = {
+
+  welcomeMessage: `182 Main St.
+  You are standing on Main Street between Church and South Winooski.
+  There is a door here. Its boarded shut.
+  On the door is a handwritten sign.`,
+
+  readSign: `The sign is old and battered. It knocks against the door in the wind. It reads: 
+  "Condemned, do not enter"
+  You notice a black cat run behind the building`,
+
+  takeSign: `You attempt to pull it off. Despite how much it flaps around in the wind,
+  the sign holds fast. Bystanders look concerned.`,
+
+  backChurch: `The back of the church is a lot occupied by a few stray cats. They look perturbed that you've interrupted them. Broken glass crunches underfoot. 
+  You realize someone has smashed the window open, leaving behind a dark opening. Maybe you could squeeze in...`,
+
+  insideHole: `Something is wrong. You can't tell if its the stale air, the ruptured pews, or the deafening silence thats taken the place of bustling traffic. 
+  ${knifeStatus} You stand on the stage next to a forsaken statue of jesus. What sermon will you give the strays?
+  In the darkness you see a hole in the floor.`,
+}
+
+let validVerbs = ['move', 'walk', 'go', 'run', 'crawl','climb', 'squeeze','follow','chase'];
+let validPickup = ['grab', 'pickup', 'aquire','snatch','yoink','use','take'];
+
+let area = {
+  front: ['back'],
+  back: ['front', 'hole'],
+  hole: ['back','deepHole'],
+  deepHole: []
+}
+
+let currentArea = 'front'
+function movePlayer(newArea) {
+  let validTransition = area[currentArea];
+  if(validTransition.includes(newArea)) {
+    currentArea = newArea;
+    photo.src = photoDatabase[currentArea];
+    soundSource.src = soundDatabase[currentArea];
+    sound.load();
+    muteCheck();
+    locationOutput.textContent = newArea;
+} else {
+    throw(`Invalid State: ${currentArea} to ${newArea}`)
+}
+}
+
+function addInventory(item){
+  //conditional to prevent duplicates. 
+  if(currentItems.includes(item)){
+    feedback('You already have that item.');
+    return
+  }
+  let divItem = document.createElement('div');
+    divItem.classList.add('item');
+    divItem.textContent = `${item} | Description:`+ playerInventory.items[item];
+    itemBox.appendChild(divItem);
+    currentItems.push(item);
+    feedback(`You've aquired: ${item}`);
+}
+
+function toggleAudio(){
+  if(isPlaying === true){
+   sound.pause();
+   return
+  }
+  sound.play();
+ }
+ sound.onplaying = function() {
+   isPlaying = true;
+ };
+ sound.onpause = function() {
+   isPlaying = false;
+ };
+
 // displays quesiton in textOutput element. Accepts questionText parameter
 function ask(questionText) {
   let i = 0;
@@ -26,6 +136,12 @@ function playAudio() {
   sound.play();
 }
 
+function muteCheck(){
+  if(isPlaying === true){
+    sound.play();
+    console.log('sound is playing');
+  }
+}
 function printError(){
     basketOutput.textContent = `You need a valid verb!`
     setTimeout(() => {
@@ -75,13 +191,15 @@ if(currentArea === 'front'){
     if(answer.some(verbCheck)){
     if(answer.includes('back') || answer.includes('around') || answer.includes('behind') || answer.includes('cat')){
         movePlayer('back');
-        soundSource.src="audio/backyard.mp3";
-        sound.load();
+       // soundSource.src="audio/backyard.mp3";
+        //sound.load();
         //prevents audio from starting back up between scenes if you have it muted 
-        if(isPlaying === true){
+      /*  if(isPlaying === true){
           sound.play();
         }
+        */
         ask(lore.backChurch);
+        
         return
     }
   }
@@ -90,16 +208,9 @@ if(currentArea === 'front'){
 
 if(currentArea === 'back'){
 
-  photo.src = 'https://i.imgur.com/MGBgcux.png'
-
   if(answer.some(verbCheck)){
     if(answer.includes('front')){
         movePlayer('front');
-        soundSource.src="audio/crickets.mp3";
-        sound.load();
-        if(isPlaying === true){
-          sound.play();
-        }
         ask(lore.welcomeMessage);
         return
     }
@@ -136,103 +247,6 @@ if (currentArea === 'hole'){
   }
  }
 
-let validVerbs = ['move', 'walk', 'go', 'run', 'crawl','climb', 'squeeze','follow','chase'];
-let validPickup = ['grab', 'pickup', 'aquire','snatch','yoink','use','take'];
-let knifeStatus = `On the floor is a knife.`
-let isPlaying = true
-
-let area = {
-  front: ['back'],
-  back: ['front', 'hole'],
-  hole: ['back','deepHole'],
-  deepHole: []
-}
-
-let currentArea = 'front'
-function movePlayer(newArea) {
-
-  let validTransition = area[currentArea];
-  if(validTransition.includes(newArea)) {
-    currentArea = newArea;
-    locationOutput.textContent = newArea;
-} else {
-    throw(`Invalid State: ${currentArea} to ${newArea}`)
-}
-}
-
-let lore = {
-
-  welcomeMessage: `182 Main St.
-  You are standing on Main Street between Church and South Winooski.
-  There is a door here. Its boarded shut.
-  On the door is a handwritten sign.`,
-
-  readSign: `The sign is old and battered. It knocks against the door in the wind. It reads: 
-  "Condemned, do not enter"
-  You notice a black cat run behind the building`,
-
-  takeSign: `You attempt to pull it off. Despite how much it flaps around in the wind,
-  the sign holds fast. Bystanders look concerned.`,
-
-  backChurch: `The back of the church is a lot occupied by a few stray cats. They look perturbed that you've interrupted them. Broken glass crunches underfoot. 
-  You realize someone has smashed the window open, leaving behind a dark opening. Maybe you could squeeze in...`,
-
-  insideHole: `Something is wrong. You can't tell if its the stale air, the ruptured pews, or the deafening silence thats taken the place of bustling traffic. 
-  ${knifeStatus} You stand on the stage next to a forsaken statue of jesus. What sermon will you give the strays?
-  In the darkness you see a hole in the floor.`,
-}
-
-let playerInventory = {
-  //fun fact: the original Zork had a water bottle you could drink from that would refresh the narrator. Thats why I included it as the default inventory item.
-    items: {
-      Water: 'Water. looks refreshing',
-}}
-document.getElementById('firstItem').textContent = `Water | Description:`+ playerInventory.items.Water;
-console.log(playerInventory.items['Knife']);
-
-let userInput = document.getElementById("input");
-let textOutput = document.getElementById("output");
-let locationOutput = document.getElementById("location");
-let basketOutput = document.getElementById('basket');
-let sound = document.getElementById('ambiance');
-let soundSource = document.getElementById('audioSource')
-let photo = document.getElementById('environment');
-let playButton = document.getElementById('play');
-let muteButton = document.getElementById('muteBtn');
-let itemBox = document.getElementById('inventoryBox');
-let currentItems = ['Water'];
-
-function addInventory(item){
-  //conditional to prevent duplicates. 
-  if(currentItems.includes(item)){
-    feedback('You already have that item.');
-    return
-  }
-  let divItem = document.createElement('div');
-    divItem.classList.add('item');
-    divItem.textContent = `${item} | Description:`+ playerInventory.items[item];
-    itemBox.appendChild(divItem);
-    currentItems.push(item);
-    feedback(`You've aquired: ${item}`);
-}
-
-function toggleAudio(){
-  if(isPlaying === true){
-   sound.pause();
-   return
-  }
-  sound.play();
- }
- 
- sound.onplaying = function() {
-   isPlaying = true;
- };
- sound.onpause = function() {
-   isPlaying = false;
- };
-
-playGame();
-
 muteButton.addEventListener('click', e => {
   e.preventDefault();
   toggleAudio();
@@ -244,7 +258,7 @@ btn.addEventListener('click', e => {
   start();
 })
 
-
+playGame();
 // church https://i.imgur.com/hHGRykT.png
 // window https://i.imgur.com/MGBgcux.png
 // inside https://i.imgur.com/0eRhzEs.png
