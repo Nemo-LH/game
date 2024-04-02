@@ -31,7 +31,7 @@ let photoDatabase = {
   back: 'https://i.imgur.com/MGBgcux.png',
   hole: 'https://i.imgur.com/0eRhzEs.png',
   deepHole: 'https://i.imgur.com/RwnZNNQ.png',
-  playerDeath: 'blob:https://imgur.com/e8579030-8b72-4769-83d4-1381945cdcfb',
+  playerDeath: 'https://i.imgur.com/peqnCZY.png',
 }
 
 let soundDatabase = {
@@ -39,7 +39,7 @@ let soundDatabase = {
   back: 'audio/backyard.mp3',
   hole: 'audio/empty.mp3',
   deepHole: 'audio/abandonded.mp3',
-  playerDeath: 'audio.bonecrunch.mp3',
+  playerDeath: 'audio/bonecrunch.mp3',
 }
 
 let lore = {
