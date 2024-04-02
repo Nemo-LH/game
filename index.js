@@ -12,9 +12,11 @@ let muteButton = document.getElementById('muteBtn');
 let itemBox = document.getElementById('inventoryBox');
 let knifeStatus = 'On the floor is a knife.';
 let catStatus = "They look perturbed that you've interrupted them.";
+let errorGate = true;
 let isPlaying = true;
 let trueItem ='';
 let targetItem ='';
+let hints =''
 
 let playerInventory = {
   //fun fact: the original Zork had a water bottle you could drink from that would refresh the narrator. Thats why I included it as the default inventory item.
@@ -28,7 +30,8 @@ let photoDatabase = {
   front: 'https://i.imgur.com/hHGRykT.png',
   back: 'https://i.imgur.com/MGBgcux.png',
   hole: 'https://i.imgur.com/0eRhzEs.png',
-  deepHole: '',
+  deepHole: 'https://i.imgur.com/RwnZNNQ.png',
+  playerDeath: 'blob:https://imgur.com/e8579030-8b72-4769-83d4-1381945cdcfb',
 }
 
 let soundDatabase = {
@@ -36,6 +39,7 @@ let soundDatabase = {
   back: 'audio/backyard.mp3',
   hole: 'audio/empty.mp3',
   deepHole: 'audio/abandonded.mp3',
+  playerDeath: 'audio.bonecrunch.mp3',
 }
 
 let lore = {
@@ -76,7 +80,7 @@ let church = {
     },
 
       back:  {
-        validEntry: ['back', 'around', 'behind','cat','out','outside'],
+        validEntry: ['around', 'back','behind','cat','out','outside'],
         roomInventory: {
           cat: {
             validUse: ['throw', 'drop','place','set','letgo'],
@@ -102,9 +106,11 @@ let church = {
       }
 
 }
-let validVerbs = ['move', 'walk', 'go', 'run', 'crawl','climb', 'squeeze','follow','chase','toward','move',];
+let validVerbs = ['move', 'walk', 'go', 'run', 'crawl','climb', 'squeeze','follow','chase','toward','move','approach','aproach','look', 'inspect'];
 let validPickup = ['grab', 'pickup', 'aquire','snatch','yoink','use','take'];
 let validDrop = ['throw', 'drop','place','set','letgo']
+let validCat = ['throw', 'drop','place','set','letgo', 'feed', 'sacrifice','give','set'];
+let validFight = ['fight','attack','stab','defend','use','knife','slash','slice'];
 
 let area = {
   front: ['back'],
@@ -220,6 +226,12 @@ function pickupCheck(verb){
 function dropCheck(verb){
   return validDrop.includes(verb);
 }
+function catCheck(cat){
+  return validCat.includes(cat);
+}
+function fightCheck(fight){
+  return validFight.includes(fight);
+}
 function roomItems(item){
   //Looks at answer array, stores matching value in targetItem variable
   console.log(currentArea);
@@ -241,29 +253,31 @@ function validEntryCheck(noun){
  if(availableMoves.includes('back') && church.back.validEntry.includes(noun)){
         movePlayer('back');
         ask(lore.backChurch);
+        errorGate = false;
         answer='';
         return
  }
  if(availableMoves.includes('front') && church.front.validEntry.includes(noun)){
         movePlayer('front');
         ask(lore.welcomeMessage);
+        errorGate = false;
         answer='';
         return
  }  
  if(availableMoves.includes('hole') && church.hole.validEntry.includes(noun)){
         movePlayer('hole');
         ask(lore.insideHole);
+        errorGate = false;
         answer = '';
         return
  }
  if(availableMoves.includes('deepHole') && church.deepHole.validEntry.includes(noun)){
         movePlayer('deepHole');
         ask(lore.deepHole);
+        errorGate = false;
         answer = '';
         return
  }
-
-
 }
 
 function playAudio() {
@@ -318,12 +332,132 @@ function checkRoomItems() {
 function playerAction(){
   if(answer.some(verbCheck)){
     answer.some(validEntryCheck);
-    feedback('You need a valid noun, try "back" or "around"');
-    return
+    if(errorGate){
+      let validTransition = area[currentArea];
+      hints = '';
+      for (let i = 0; i < validTransition.length; i++){
+        let newRoom = validTransition[i];
+        hints = hints + " ..." + church[newRoom].validEntry[0];
+      }
+      // gives first item of valid nouns array for valid destinations
+      feedback(`You need a valid noun, something like: ${hints}`);
+    }
+    errorGate = true;
+  }
+  if(answer.some(dropCheck) !== true){
+    feedback('You need a valid verb');
+    }
+  
+}
+
+function validFlee(noun){
+  let availableMoves = area[currentArea];
+  if(availableMoves.includes('hole') && church.hole.validEntry.includes(noun)){
+   return true
+}
+}
+//
+function finalMessage(endMessage) {
+  let text = document.getElementById("popup");
+  text.textContent = endMessage;
+}
+
+function youWin(endMessage){
+  errorGate = false;
+  photo.src = photoDatabase.playerDeath;
+  soundSource.src = soundDatabase.playerDeath;
+  sound.load();
+  muteCheck();
+  finalMessage(endMessage);
+  let againBtn= document.createElement('button');
+  againBtn.classList.add('playAgain');
+  againBtn.textContent = 'Play Again?';
+  againBtn.setAttribute('id','again');
+  let text = document.getElementById("popup");
+  text.appendChild(againBtn);
+  text.classList.toggle("show");
+  let play = document.getElementById('again');
+  play.addEventListener('click', e => {
+  e.preventDefault();
+  window.location.reload();
+  })
+}
+
+function gameOver() {
+  if(answer.some(catCheck) && answer.includes('cat') && currentItems.includes('cat')){
+    dropItem('cat');
+    youWin('The Beast was hungry. You fed it, but at what cost? You leave with your life.');
+  }
+  if(answer.some(fightCheck) && currentItems.includes('knife')){
+    youWin('You stab at its waxy skin and brittle bones. It fights with suprising strength. You wound it, and leave this place alive');
+  }
+  if(answer.some(fightCheck) && currentItems.includes('knife') !==true){
+    youDied(true,false);
+  }
+  if(answer.some(verbCheck)){
+    if(answer.some(validFlee)|| answer.includes('run') || answer.includes('away')){
+      console.log('you died');
+      youDied(false,true);
+      answer=''
+      return
+    }
+    if(errorGate){
+      feedback('You need a valid noun, try "back" or "around"');
+    }
+    errorGate = true;
   }
   if(answer.some(dropCheck) !== true){
   feedback('You need a valid verb');
   }
+}
+
+function deathScreen(){
+  
+  let againBtn= document.createElement('button');
+  againBtn.classList.add('playAgain');
+  againBtn.textContent = 'Play Again?';
+  againBtn.setAttribute('id','again');
+  let text = document.getElementById("popup");
+  text.textContent = 'The Beast was hungry. You died';
+  text.appendChild(againBtn);
+  text.classList.toggle("show");
+  let play = document.getElementById('again');
+  play.addEventListener('click', e => {
+  e.preventDefault();
+  window.location.reload();
+  })
+}
+
+function deathScreen2(){
+ 
+  let againBtn= document.createElement('button');
+  againBtn.classList.add('playAgain');
+  againBtn.textContent = 'Play Again?';
+  againBtn.setAttribute('id','again');
+  let text = document.getElementById("popup");
+  text.textContent = 'Its stronger than you imagined. You scratch and writhe, but without a weapon you have no hope. The last thing you think about is cats.';
+  text.appendChild(againBtn);
+  text.classList.toggle("show");
+  let play = document.getElementById('again');
+  play.addEventListener('click', e => {
+  e.preventDefault();
+  window.location.reload();
+  })
+}
+
+function youDied(knife, cat) {
+  errorGate = false;
+  photo.src = photoDatabase.playerDeath;
+  soundSource.src = soundDatabase.playerDeath;
+  sound.load();
+  muteCheck();
+  if(knife){
+    setTimeout(deathScreen2,5000);
+  }
+  if(cat){
+    setTimeout(deathScreen,5000);
+  }
+  
 }
 
 function start() {
@@ -362,10 +496,9 @@ if (currentArea === 'hole'){
  if (currentArea === 'deepHole'){
     drop();    
     checkRoomItems();
-    playerAction();
-  }
+    gameOver();
  }
-
+}
 muteButton.addEventListener('click', e => {
   e.preventDefault();
   toggleAudio();
